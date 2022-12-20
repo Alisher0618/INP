@@ -15,3 +15,8 @@ Download the EduMIPS64 simulator (https://edumips.org/) - preferably in jar form
 
 To run program use:
   ```java -jar edumips64-1.2.10.jar -f hello.s```
+
+How to use tester
+=====
+  1) change hello.s to xlogin.s
+  2) ```python3 test.py```
