@@ -37,7 +37,7 @@ def validateLogin(login):
     
 validateLogin(login)
 if not os.path.exists(login + ".s"):
-    print(f"ERROR!!! File needs to be in same directory as file {login}.s")
+    print(f"ERROR!!! File needs to be in same directory as file {login}.s") 
     exit(1)
 
 sourceCode = open(login + ".s", "r").read()
