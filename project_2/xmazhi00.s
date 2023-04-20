@@ -1,4 +1,4 @@
-; Autor reseni: Alisher Mazhirinov, xmazhi00
+; Autor: xmazhi00
 
 ; Projekt 2 - INP 2022
 ; Vernamova sifra na architekture MIPS64
@@ -15,19 +15,19 @@ params_sys5:    .space  8   ; misto pro ulozeni adresy pocatku
 
 ; CODE SEGMENT
                 .text
-; ZDE NAHRADTE KOD VASIM RESENIM
+
+; ***************My Implementation*************** 
 main:           
     addi r4, r0, 0
     addi r18, r0, 0
                 
-while:  ;hlavní cast programu. 
-        ;Funkce, ktera resi budeme posouvat o 13 znaku vpred, nebo o 1 znak vzad        
+while:      
     lb r11, login(r4)
     slti r16, r11, 97           
     bne r16, r18, finish
     andi r16, r4, 1
-    beq r16, r18, increment     ;pokud r4 je sude znaky a 0, jdeme do funkce "increment"
-    bne r16, r18, decrement     ;jinak do funkce "decrement"
+    beq r16, r18, increment    
+    bne r16, r18, decrement     
                 
 increment:  ; +13
     addi r11, r11, 13
@@ -45,16 +45,17 @@ decrement:  ; -1
     addi r11, r11, 26 
     b write
 
-write:  ;zapisovani do cipheru
+write:
     sb r11, cipher(r4)
     addi r4, r4, 1
     xor r28, r28, r28
     b while
 
-finish: ;ukoncovani programu
+finish:
     daddi r4, r0, cipher
     jal print_string
-    syscall 0
+    syscall 0    
+; ***************End of Implmentation***************
 
 print_string:   ; adresa retezce se ocekava v r4
                 sw      r4, params_sys5(r0)
