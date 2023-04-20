@@ -11,7 +11,7 @@ To run program use:
   ```java -jar edumips64-1.2.10.jar -f xlogin00.s```
 
 ## Testing
-  1) change xmazhi00.s to yourLogin.s
+  1) change xmazhi00.s to yourLogin.s 
   2) ```python3 test.py```
 
 ## Final Evaluation
