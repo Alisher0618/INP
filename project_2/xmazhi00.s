@@ -55,7 +55,7 @@ finish:
     daddi r4, r0, cipher
     jal print_string
     syscall 0    
-; ***************End of Implmentation***************
+; ***************End of Implementation***************
 
 print_string:   ; adresa retezce se ocekava v r4
                 sw      r4, params_sys5(r0)
