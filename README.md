@@ -1,4 +1,4 @@
-# INP
+# INP - Design of Computer Systems
 
 Final Evaluation
 ==================
