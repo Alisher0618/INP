@@ -66,9 +66,6 @@ architecture behavioral of cpu is
     signal mx2_sel: std_logic_vector(1 downto 0);
     signal mx2_out: std_logic_vector(7 downto 0);
 
-    signal ready_internal : std_logic := '0';
-    signal done_internal  : std_logic := '0';
-
     type STATE_TYPE is (
       IDLE,
       S_WAIT, S_WAIT_NEXT,
@@ -83,29 +80,18 @@ architecture behavioral of cpu is
       END_WHILE_FIND_BRACKET, 
       PUTCHAR_START, PUTCHAR_IN, PUTCHAR_END,
       GETCHAR_START, GETCHAR_IN, GETCHAR_END,
-      S_RETURN,
       S_READY,
       S_DONE,
-      S_INIT_START,
-      S_INIT1,
-      S_INIT2,
-      S_INIT3,
-      S_INIT4,
-      S_BREAK,
-      S_OTHERS, S_OTHERS_NEXT,
-      S_HALT,
-      S_HALT1,
-      S_HALT2
+      S_BREAK, S_BREAK1, S_BREAK2, S_BREAK3, S_BREAK4,
+      S_OTHERS,
+      S_HALT
       );
 
     signal fsm_state : STATE_TYPE := IDLE;
     signal NEXT_STATE : STATE_TYPE;
 
-    --signal PTR_Z   : std_logic_vector(12 downto 0) := (others => '0');
-    --signal PC_Z    : std_logic_vector(12 downto 0) := (others => '0');
-
 begin
-    cnt: process (CLK, RESET, cnt_inc, cnt_dec)
+    cnt: process (CLK, RESET, cnt_inc, cnt_dec, cnt_rst)
     begin
         if RESET = '1' then
             cnt_reg <= (others => '0');
@@ -114,10 +100,11 @@ begin
                 cnt_reg <= cnt_reg + 1;
             elsif cnt_dec = '1' then
                 cnt_reg <= cnt_reg - 1;
-
+            elsif cnt_rst = '1' then
+                cnt_reg <= ( 0 => '1', others => '0');
             end if;
         end if;
-    end process cnt;
+    end process;
 
     pc: process (CLK, RESET, pc_inc, pc_dec)
     begin
@@ -244,7 +231,6 @@ begin
                 end if;
 
             when S_READY =>
-                ready_internal <= '1';
                 READY <= '1';
                 NEXT_STATE <= S_WAIT_NEXT;
 
@@ -254,7 +240,7 @@ begin
             --+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
                 
             when S_WAIT_NEXT =>
-                NEXT_STATE <= FETCH1;
+                NEXT_STATE <= FETCH;
             
             when FETCH =>   
                 mx1_sel <= '0';             
@@ -288,9 +274,35 @@ begin
                     when X"2C" =>
                         NEXT_STATE <= GETCHAR_START;
                     when others =>
-                        NEXT_STATE <= S_OTHERS_NEXT;
+                        NEXT_STATE <= S_OTHERS;
                 end case;
 
+            --- break start
+            when S_BREAK =>
+                mx1_sel <= '1';
+                pc_inc <= '1';
+                
+                NEXT_STATE <= S_BREAK1;
+
+            when S_BREAK1 =>
+                DATA_EN <= '1';
+                DATA_RDWR <= '0';
+
+                NEXT_STATE <= S_BREAK4;
+
+            when S_BREAK3 =>
+                if cnt_reg = "0000000000000" then
+
+                    NEXT_STATE <= FETCH;
+                else
+                    if DATA_RDATA = X"5B" then
+                        cnt_inc <= '1';
+                    elsif DATA_RDATA = X"5D" then
+                        cnt_dec <= '1';
+                    end if;
+                    pc_inc <= '1';
+                end if;
+                NEXT_STATE <= S_BREAK1;
 
             when INC_PTR =>
                 ptr_inc <= '1';
@@ -312,21 +324,20 @@ begin
                     
             when INC_VAL_TO_DATA =>
                 DATA_EN <= '1';
-                
-                mx1_sel <= '1';
+                DATA_RDWR <= '0';
 
                 NEXT_STATE <= INC_VAL_INC;
 
             when INC_VAL_INC =>
                 mx2_sel <= "01";
                 mx1_sel <= '1';
-                pc_inc <= '1';
-
+                
                 NEXT_STATE <= INC_VAL_END;
 
             when INC_VAL_END =>
                 DATA_EN <= '1';
                 DATA_RDWR <= '1';
+                pc_inc <= '1';
 
                 NEXT_STATE <= FETCH;
 
@@ -339,104 +350,96 @@ begin
                     
             when DEC_VAL_TO_DATA =>
                 DATA_EN <= '1';
-                mx1_sel <= '1';
+                DATA_RDWR <= '0';
 
                 NEXT_STATE <= DEC_VAL_DEC;
 
             when DEC_VAL_DEC =>
                 mx2_sel <= "10";
                 mx1_sel <= '1';
-                pc_inc <= '1';
 
                 NEXT_STATE <= DEC_VAL_END;
 
             when DEC_VAL_END =>
                 DATA_EN <= '1';
                 DATA_RDWR <= '1';
+                pc_inc <= '1';
 
                 NEXT_STATE <= FETCH;
 
             --- vytiskni hodnotu aktualni bunky
             when PUTCHAR_START =>
                 mx1_sel <= '1';
-
                 NEXT_STATE <= PUTCHAR_IN;
          
             when PUTCHAR_IN =>
                 DATA_EN <= '1';
                 DATA_RDWR <= '0';
-                mx1_sel <= '1';
-
                 NEXT_STATE <= PUTCHAR_END;
 
             when PUTCHAR_END =>
                 if OUT_BUSY = '1' then
-                    mx1_sel <= '1';
-                    DATA_EN <= '1';
-                    DATA_RDWR <= '0';
-
                     NEXT_STATE <= PUTCHAR_END;
                 else
-                    mx1_sel <= '0';
                     OUT_WE <= '1';
                     pc_inc <= '1';
-                    
-                    NEXT_STATE <= S_WAIT_NEXT;
+                    NEXT_STATE <= FETCH;
                 end if;
 
             --- nacti hodnotu a uloz ji do aktualnı bunky
             when GETCHAR_START =>
-                mx1_sel <= '1';
-                if IN_VLD /= '1' then
+                IN_REQ <= '1';
+                NEXT_STATE <= GETCHAR_IN;
+                
+            when GETCHAR_IN =>
+                if IN_VLD = '0' then
                     IN_REQ <= '1';
-                    
                     NEXT_STATE <= GETCHAR_START;
                 else
-                    DATA_EN <= '1';
+                    mx1_sel <= '1';
                     mx2_sel <= "00";
-                    
-                    NEXT_STATE <= GETCHAR_IN;
+                    NEXT_STATE <= GETCHAR_END;
                 end if;
 
-            when GETCHAR_IN =>
+            when GETCHAR_END =>
                 DATA_EN <= '1';
-                mx1_sel <= '1';
                 DATA_RDWR <= '1';
                 pc_inc <= '1';
                 
-                NEXT_STATE <= GETCHAR_END;
-
-            when GETCHAR_END =>
-            
-            NEXT_STATE <= FETCH;
+                NEXT_STATE <= FETCH;
 
             --- while start
-            when WHILE_START =>
+             when WHILE_START =>
                 mx1_sel <= '1';
+                pc_inc <= '1';
 
                 NEXT_STATE <= WHILE_GET_DATA;
 
             when WHILE_GET_DATA =>
-                pc_inc <= '1';
                 DATA_EN <= '1';
-
+                DATA_RDWR <= '0';
                 NEXT_STATE <= WHILE_CHECK_DATA;
 
             when WHILE_CHECK_DATA =>
-                if DATA_RDATA /= "00000000" then
-                
-                    NEXT_STATE <= FETCH1;
-                else
+                if DATA_RDATA = "00000000" then
                     DATA_EN <= '1';
+                    DATA_RDWR <= '0';
                     cnt_inc <= '1';
-
-                    NEXT_STATE <= WHILE_CHECK_CNT;
+                    NEXT_STATE <= WHILE_FIND_BRACKET;
+                    
+                else
+                    NEXT_STATE <= FETCH;
                 end if;
+
+            when WHILE_FIND_BRACKET =>
+                DATA_EN <= '1';
+                DATA_RDWR <= '0';
+                NEXT_STATE <= WHILE_CHECK_CNT;
 
             when WHILE_CHECK_CNT =>
                 if cnt_reg = "0000000000000" then
 
-                    NEXT_STATE <= FETCH1;
+                    NEXT_STATE <= FETCH;
                 else
                     if DATA_RDATA = X"5B" then
                         cnt_inc <= '1';
@@ -448,27 +451,23 @@ begin
                     NEXT_STATE <= WHILE_FIND_BRACKET;
                 end if;
 
-            when WHILE_FIND_BRACKET =>
-                DATA_EN <= '1';
-
-                NEXT_STATE <= WHILE_CHECK_CNT;
 
             --- while end
             when END_WHILE_START =>
                 mx1_sel <= '1';
-
                 NEXT_STATE <= END_WHILE_GET_DATA;
 
             when END_WHILE_GET_DATA =>
                 DATA_EN <= '1';
+                DATA_RDWR <= '0';
 
                 NEXT_STATE <= END_WHILE_CHECK_DATA;
 
             when END_WHILE_CHECK_DATA =>
-                if DATA_RDATA = (DATA_RDATA'range => '0') then
+                if DATA_RDATA = "00000000" then
                     pc_inc <= '1';
 
-                    NEXT_STATE <= S_WAIT_NEXT;
+                    NEXT_STATE <= FETCH;
                 else
                     cnt_inc <= '1';
                     pc_dec <= '1';
@@ -477,9 +476,9 @@ begin
                 end if;
             
             when END_WHILE_CHECK_CNT =>
-                if cnt_reg = (cnt_reg'range => '0') then
+                if cnt_reg = "0000000000000" then
 
-                    NEXT_STATE <= FETCH1;
+                    NEXT_STATE <= FETCH;
                 else 
                     if DATA_RDATA = X"5D" then
                         cnt_inc <= '1';
@@ -491,28 +490,22 @@ begin
                 end if;
 
             when END_WHILE_CHECK_FOUND =>
-                if cnt_reg = (cnt_reg'range => '0') then
+                if cnt_reg = "0000000000000" then
                     pc_inc <= '1';
                 else
                     pc_dec <= '1';
                 end if;
-
-                NEXT_STATE <= END_WHILE_FIND_BRACKET;
-            
-            when END_WHILE_FIND_BRACKET =>
                 DATA_EN <= '1';
+                DATA_RDWR <= '0';
 
                 NEXT_STATE <= END_WHILE_CHECK_CNT;
             
-
                                         
             when others =>
                 pc_inc <= '1';
                 NEXT_STATE <= S_WAIT_NEXT;
 
         end case;
-
-    
     end process fsm;
 
 
