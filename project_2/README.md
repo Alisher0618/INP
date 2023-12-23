@@ -1,10 +1,10 @@
-## Task
+## Vernam cipher algorithm
 In the MIPS64 symbolic instruction language and using a simulator
 EduMIPS64 write a program implementing a slightly modified,
 a simplified Vernam cipher algorithm.
 
 
-# Running
+## Running
 Download the EduMIPS64 simulator (https://edumips.org/) - preferably in jar format.
 
 To run program use:
@@ -15,4 +15,4 @@ To run program use:
   2) ```python3 test.py```
 
 ## Final Evaluation
-    10/10
+  10/10
