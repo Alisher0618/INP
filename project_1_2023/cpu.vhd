@@ -365,18 +365,18 @@ begin
                     DATA_EN <= '1';
                     DATA_RDWR <= '0';
                     cnt_inc <= '1';
-                    next_state <= while_5;
+                    next_state <= while_4;
                     
                 else
                     next_state <= fetch_1;
                 end if;
 
-            when while_5 =>
+            when while_4 =>
                 DATA_EN <= '1';
                 DATA_RDWR <= '0';
                 next_state <= while_4;
 
-            when while_4 =>
+            when while_5 =>
                 if cnt_reg = "0000000000000" then
 
                     next_state <= fetch_1;
@@ -388,7 +388,7 @@ begin
                     end if;
                     pc_inc <= '1';
 
-                    next_state <= while_5;
+                    next_state <= while_4;
                 end if;
 
             -- start of end while cycle
