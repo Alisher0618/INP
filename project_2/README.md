@@ -14,5 +14,5 @@ To run program use:
   1) change xmazhi00.s to yourLogin.s 
   2) ```python3 test.py```
 
-## Final Evaluation
+## Evaluation
   10/10

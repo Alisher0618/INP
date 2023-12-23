@@ -3,5 +3,6 @@ The goal of this project is to implement a VHDL processor that will be able to e
 
 `[.>] @Hello World!` - code example
 
-## Final Evaluation
+## Evaluation
     19/23
+    no nested loops
